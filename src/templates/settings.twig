@@ -1,0 +1,26 @@
+{# @var craft \craft\web\twig\variables\CraftVariable #}
+{#
+/**
+ * csv-to-category-importer plugin for Craft CMS 3.x
+ *
+ * csv-to-category-importer Settings.twig
+ *
+ * @author    Sam Henderson
+ * @copyright Copyright (c) 2018 Sam Henderson
+ * @link      http://samhenderson.xyz/
+ * @package   Csvtocategoryimporter
+ * @since     1.0.0
+ */
+#}
+
+{% import "_includes/forms" as forms %}
+
+{% do view.registerAssetBundle("workyard\\csvtocategoryimporter\\assetbundles\\csvtocategoryimporter\\CsvtocategoryimporterAsset") %}
+
+{{ forms.textField({
+    label: 'Some Field',
+    instructions: 'Enter some setting here.',
+    id: 'someAttribute',
+    name: 'someAttribute',
+    value: settings['someAttribute']})
+}}

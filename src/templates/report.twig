@@ -1,0 +1,16 @@
+{% extends "_layouts/cp" %}
+{% set title = "CSV Upload Report" %}
+{% do view.registerAssetBundle("workyard\\csvtocategoryimporter\\assetbundles\\csvtocategoryimporter\\CsvtocategoryimporterAsset") %}
+
+{% set content %}
+    <table class="table">
+        <th class="table-header">Location</th>
+        <th class="table-header">What happened</th>
+        {%  for location in report %}
+            <tr>
+                <td class="table-cell">{{ location.title }}</td>
+                <td class="table-cell">{{ location.status }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+{%  endset %}

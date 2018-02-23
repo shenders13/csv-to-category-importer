@@ -1,0 +1,88 @@
+{# @var craft \craft\web\twig\variables\CraftVariable #}
+{#
+/**
+ * csv-to-category-importer plugin for Craft CMS 3.x
+ *
+ * csv-to-category-importer index.twig
+ *
+ * @author    Sam Henderson
+ * @copyright Copyright (c) 2018 Sam Henderson
+ * @link      http://samhenderson.xyz/
+ * @package   Csvtocategoryimporter
+ * @since     1.0.0
+ */
+#}
+
+
+{% extends "_layouts/cp" %}
+{% import "_includes/forms" as forms %}
+
+
+{% do view.registerAssetBundle("workyard\\csvtocategoryimporter\\assetbundles\\csvtocategoryimporter\\CsvtocategoryimporterAsset") %}
+{% do view.registerAssetBundle("workyard\\csvtocategoryimporter\\assetbundles\\indexcpsection\\IndexCPSectionAsset") %}
+
+{# Link for the ? icon at the bottom of the page #}
+{% set docsUrl = "https://github.com/shenders13/csv-to-category-importer/blob/master/README.md" %}
+
+{# The title of this CP section #}
+{% set title = "CSV to location category importer" %}
+
+{# The URL to this plugin's base CP section #}
+{% set pluginCpUrl = url('csv-to-category-importer') %}
+
+{# Get a URL to an image in our AssetBundle #}
+{% set iconUrl = view.getAssetManager().getPublishedUrl('@workyard/csvtocategoryimporter/assetbundles/indexcpsection/dist', true) ~ '/img/Index-icon.svg' %}
+
+{# Content that should appear in the page header#}
+{% set extraPageHeaderHtml %}
+    <div class="buttons">
+        <a href="{{ pluginCpUrl }}" class="btn submit add icon">{{ "Click Me!"|t('csv-to-category-importer') }}</a>
+    </div>
+{% endset %}
+
+{# The content of the CP Section#}
+{% set content %}
+    <p>Here's what you do:</p>
+    <ul>
+        <ol>1. Enter the URL of the CSV you want to import</ol>
+        <ol>2. Click "Upload Categories"</ol>
+    </ul>
+    <br/>
+
+    <form action="" method="post" accept-charset="UTF-8">
+        {{ csrfInput() }}
+        <p>Enter URL of file e.g. http://craft.test/assets/data/ToyLocationImport.csv</p>
+        <input type="text" name="url" placeholder="URL of file" class="file-name-input"><br/><br/>
+        <input type="hidden" name="redirect" value="/admin/csv-to-category-importer">
+        <input type="hidden" name="action" value="csv-to-category-importer/import-csv/do-something">
+        <input class="btn submit" type="submit" value="{{ 'Upload Categories'|t }}">
+    </form>
+
+
+    {#% set client = {base_uri : 'http://craft.test/', timeout : 10} %#}
+
+    {#{% set request = craft.fetch.request(client, 'GET', 'actions/csv-to-category-importer/import-csv/do-something' ) %}#}
+
+    {#{{ request | json_encode() }}#}
+
+    {#{% set report = request.body %}#}
+
+    {#<table>#}
+        {#<th><b>Title</b></th>#}
+        {#<th><b>Status</b></th>#}
+        {#{%  for location in report %}#}
+            {#<tr>#}
+                {#<td>{{ location.title }}</td>#}
+                {#<td>{{ location.status }}</td>#}
+            {#</tr>#}
+        {#{% endfor %}#}
+
+    {#</table>#}
+
+        {% if report is defined %}
+            <h1>report is set</h1>
+        {% endif %}
+
+
+{% endset %}
+

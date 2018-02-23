@@ -1,0 +1,44 @@
+{
+    "name": "workyard/csv-to-category-importer",
+    "description": "Reads a CSV file and imports the rows. It turns each row into a location category.",
+    "type": "craft-plugin",
+    "version": "1.0.0",
+    "keywords": [
+        "craft",
+        "cms",
+        "craftcms",
+        "craft-plugin",
+        "csv-to-category-importer"
+    ],
+    "support": {
+        "docs": "https://github.com/shenders13/csv-to-category-importer/blob/master/README.md",
+        "issues": "https://github.com/shenders13/csv-to-category-importer/issues"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Sam Henderson",
+            "homepage": "http://samhenderson.xyz/"
+        }
+    ],
+    "require": {
+        "craftcms/cms": "^3.0.0-RC1",
+        "guzzlehttp/guzzle": "^6.3"
+    },
+    "autoload": {
+        "psr-4": {
+          "workyard\\csvtocategoryimporter\\": "src/"
+        }
+    },
+    "extra": {
+        "name": "csv-to-category-importer",
+        "handle": "csv-to-category-importer",
+        "hasCpSettings": true,
+        "hasCpSection": true,
+        "changelogUrl": "https://raw.githubusercontent.com/shenders13/csv-to-category-importer/master/CHANGELOG.md",
+        "components": {
+            "importCsv": "workyard\\csvtocategoryimporter\\services\\ImportCsv"
+        },
+        "class": "workyard\\csvtocategoryimporter\\Csvtocategoryimporter"
+    }
+}
