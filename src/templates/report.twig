@@ -1,8 +1,11 @@
 {% extends "_layouts/cp" %}
-{% set title = "CSV Upload Report" %}
+{% set title = "Records you uploaded." %}
 {% do view.registerAssetBundle("workyard\\csvtocategoryimporter\\assetbundles\\csvtocategoryimporter\\CsvtocategoryimporterAsset") %}
 
 {% set content %}
+
+    <a href="/admin/categories/locations"><button class="'btn redirect">Go to location categories</button></a>
+
     <table class="table">
         <th class="table-header">Location</th>
         <th class="table-header">What happened</th>

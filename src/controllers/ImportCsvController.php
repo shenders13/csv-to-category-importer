@@ -58,28 +58,53 @@ class ImportCsvController extends BaseController
      */
     public function actionIndex()
     {
-        $result = 'Welcome to the ImportCsvController actionIndex() method ';
+        $file_url = "http://craft.test/assets/data/ToyLocationImport.csv";
+        $locations = Csvtocategoryimporter::$plugin->importCsv->readLocationsFromCsv($file_url);
+        $location = $locations[2];
 
-        return json_encode($result);
+//        $parent_slug = $location['Parent Category'];
+//        $parent = Category::find()
+//            ->slug($parent_slug)
+//            ->one();
+
+        $category = Category::find()
+            ->slug($location['Slug'])
+            ->one();
+
+        $parent_slug = $location['Parent Category'];
+        $new_parent = Category::find()
+            ->slug($parent_slug)
+            ->one();
+
+        $is_parent_specified = $new_parent && $new_parent->slug === $parent_slug;
+
+//        $category->newParentId = $parent->id;
+
+//        Craft::$app->elements->saveElement($category);
+
+        return json_encode($is_parent_specified);
     }
 
     /**
      * Handle a request going to our plugin's actionDoSomething URL,
-     * e.g.: actions/csv-to-category-importer/import-csv/do-something
+     * e.g.: actions/csv-to-category-importer/import-csv/upload-csv
      *
      * @return mixed
      */
-    public function actionDoSomething()
+    public function actionUploadCsv()
     {
 
         $file_url = Craft::$app->request->getBodyParams()['url'];
-        $file_name = 'ToyLocationImport.csv';
         $locations = Csvtocategoryimporter::$plugin->importCsv->readLocationsFromCsv($file_url);
+
+
+
         $location_category_group_id = Craft::$app->categories->getGroupByHandle('locations')->id;
 
         $report = [];
 
         // Loop through each location from the CSV file.
+
 
         foreach ($locations as $key=>$location) {
 
@@ -87,17 +112,26 @@ class ImportCsvController extends BaseController
             $title = $location['Name'];
             $latitude = $location['Latitude'];
             $longitude = $location['Longitude'];
+            $parent_slug = $location['Parent Category'];
 
-            // Determine if category already exists.
+
+            // Determine if category already exists (existing_category).
 
             $does_category_already_exist = false;
-            $are_category_field_values_identical = false;
+            $are_category_properties_identical = false;
 
             $existing_category = Category::find()
                 ->groupId($location_category_group_id)
                 ->slug($slug)
                 ->title($title)
                 ->one();
+
+            $new_parent = Category::find()
+                ->slug($parent_slug)
+                ->one();
+
+            $is_a_valid_parent_specified_in_csv = $new_parent && $new_parent->slug === $parent_slug;
+
 
             // Determine if existing category needs updating.
 
@@ -108,22 +142,37 @@ class ImportCsvController extends BaseController
                 $existing_latitude = number_format((float)$existing_category->getFieldValue('latitude'), 6, '.', '');
                 $existing_longitude = number_format((float)$existing_category->getFieldValue('longitude'), 6, '.', '');
 
-                $are_field_values_matching = $existing_latitude == $latitude &&
-                    $existing_longitude == $longitude;
-                if ($are_field_values_matching) {
-                    $are_category_field_values_identical = true;
-                }
+                $existing_category_parent = $existing_category->getParent();
+
+                $is_latitude_the_same = $existing_latitude == $latitude;
+                $is_longitude_the_same = $existing_longitude == $longitude;
+                $is_parent_the_same = $existing_category_parent && $new_parent && $existing_category_parent->slug == $new_parent->slug;
+
+
+                $are_category_properties_identical = $is_latitude_the_same &&
+                                                     $is_longitude_the_same &&
+                                                     $is_parent_the_same;
             }
+
+
 
             $this_report = new \stdClass;
             $this_report->title = $title;
-            $this_report->status = "No change";
 
-            // If category doesn't exist yet, make a new category.
 
-            if (!$does_category_already_exist) {
 
-                $category = new Category();
+            // If location category doesn't need to be updated, do nothing.
+            if ($does_category_already_exist && $are_category_properties_identical) {
+                $this_report->status = "Record already existed. No changes were made.";
+            }
+
+
+            // If category needs to be created or updated.
+            else {
+
+                $is_updating_required = $does_category_already_exist && !$are_category_properties_identical;
+                $category = $is_updating_required ? $existing_category : new Category();
+
                 $category->groupId = $location_category_group_id;
                 $category->slug = $slug;
                 $category->title = $title;
@@ -132,35 +181,17 @@ class ImportCsvController extends BaseController
                     'longitude' => $longitude
                 ]);
 
+                $category->newParentId = $is_a_valid_parent_specified_in_csv ? $new_parent->id  : null;
+
                 Craft::$app->elements->saveElement($category);
-                $this_report->status = "Created";
-
-
-            } // If category exists but some fields need updating, update fields.
-
-            elseif ($does_category_already_exist && !$are_category_field_values_identical) {
-
-                $existing_category->groupId = $location_category_group_id;
-                $existing_category->slug = $slug;
-                $existing_category->setFieldValues([
-                    'latitude' => $latitude,
-                    'longitude' => $longitude
-                ]);
-
-                Craft::$app->elements->saveElement($existing_category);
-                $this_report->status = "Updated";
+                $this_report->status = $is_updating_required ? "Record already existed & was updated." : "New record created";
 
             }
 
             $report[$key] = $this_report;
 
-
         }
 
-//        $this->returnJson($report);
-
-//        Craft::$app->urlManager->setRouteVariables(array('variable' => $report));
-//        return Craft::$app->view->renderTemplate('csv-to-category-importer/report', $report);
         return $this->renderTemplate('csv-to-category-importer/report', ['report' => $report]);
 
     }

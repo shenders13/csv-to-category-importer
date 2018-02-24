@@ -22,3 +22,19 @@
     height: 30px;
     padding-left: 5px;
 }
+
+.redirect {
+    color: #fff;
+    background-image: -webkit-gradient(linear, left top, left bottom, from(#da5a47), to(#cc5643));
+    background-image: linear-gradient(#da5a47, #cc5643);
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased;
+    font-weight: 500;
+    font-size: 14px;
+    display: inline-block;
+    border-radius: 2px;
+    padding: 8px 12px;
+    border: none;
+    text-align: center;
+    margin-bottom: 30px;
+}
