@@ -13,6 +13,7 @@ use workyard\csvtocategoryimporter\Csvtocategoryimporter;
 use craft\web\Controller as BaseController;
 use craft\elements\Category;
 use craft;
+use workyard\csvtocategoryimporter\services\ImportCsv as ImportSvc;
 
 /**
  * ImportCsv Controller
@@ -45,7 +46,7 @@ class ImportCsvController extends BaseController
      *         The actions must be in 'kebab-case'
      * @access protected
      */
-    protected $allowAnonymous = ['index', 'do-something'];
+    protected $allowAnonymous = ['index', 'upload-csv'];
 
     // Public Methods
     // =========================================================================
@@ -56,143 +57,151 @@ class ImportCsvController extends BaseController
      *
      * @return mixed
      */
+
+
+
     public function actionIndex()
     {
         $file_url = "http://craft.test/assets/data/ToyLocationImport.csv";
-        $locations = Csvtocategoryimporter::$plugin->importCsv->readLocationsFromCsv($file_url);
-        $location = $locations[2];
+        $import_svc = new ImportSvc();
+        $locations = $import_svc->readLocationsFromCsv($file_url);
 
-//        $parent_slug = $location['Parent Category'];
-//        $parent = Category::find()
-//            ->slug($parent_slug)
-//            ->one();
+        $location = $locations[3];
 
-        $category = Category::find()
-            ->slug($location['Slug'])
+        $location_category_group_id = Craft::$app->categories->getGroupByHandle('locations')->id;
+
+        $nearby_locations_string_from_csv = $location['Nearby Locations']; // e.g. santa-monica,palos-verdes-estate
+        $nearby_locations_slugs_from_csv = explode(",", $nearby_locations_string_from_csv); // e.g. ["santa-monica","palos-verdes-estate"]
+
+
+
+        // Get all nearby location categories associated with the slugs from the CSV.
+
+        $nearby_locations = [];
+        foreach ($nearby_locations_slugs_from_csv as $nearby_location_slug) {
+            $nearby_location = Category::find()
+                ->groupId($location_category_group_id)
+                ->slug($nearby_location_slug)
+                ->one();
+
+            if (!is_null($nearby_location)) {
+                array_push($nearby_locations, $nearby_location);
+            }
+
+        }
+
+
+
+        // Get the existing location category associated with the location in the CSV
+
+        $existing_location = Category::find()
+            ->groupId($location_category_group_id)
+            ->slug($location["Slug"])
             ->one();
 
-        $parent_slug = $location['Parent Category'];
-        $new_parent = Category::find()
-            ->slug($parent_slug)
+
+
+
+        // Get the category object associated with the "Parent Category" slug from the CSV file.
+
+        $existing_location_parent = Category::find()
+            ->slug($location["Parent Category"])
             ->one();
 
-        $is_parent_specified = $new_parent && $new_parent->slug === $parent_slug;
+        // TODO: delete $existing_nearby_location_slugs
+        $existing_nearby_location_slugs = [];
 
-//        $category->newParentId = $parent->id;
+        $are_nearby_categories_the_same = false;
 
-//        Craft::$app->elements->saveElement($category);
+        if ($existing_location) {
 
-        return json_encode($is_parent_specified);
+
+            $existing_locations_nearby_locations = $existing_location
+                                                    ->getFieldValue("nearbyLocations")
+                                                    ->descendantOf($existing_location_parent) // get children (not LA or Sydney)
+                                                    ->asArray();
+
+
+            foreach ($existing_locations_nearby_locations as $existing_locations_nearby_location) {
+                $existing_nearby_location_slug = $existing_locations_nearby_location['slug'];
+                array_push($existing_nearby_location_slugs, $existing_nearby_location_slug);
+            }
+
+//            function identical_values( $arrayA , $arrayB ) {
+//                sort( $arrayA );
+//                sort( $arrayB );
+//                return $arrayA == $arrayB;
+//            }
+
+            $are_nearby_categories_the_same = identical_values($existing_nearby_location_slugs, $nearby_locations_slugs_from_csv);
+
+        }
+
+
+        $result = [
+            'location' => $location['Name'],
+            'are_nearby_categories_the_same' => $are_nearby_categories_the_same,
+            'nearby_locations_slugs_from_csv' => $nearby_locations_slugs_from_csv,
+            'existing_nearby_location_slugs' => $existing_nearby_location_slugs,
+        ];
+
+
+        // initialise nearby_locations (actual category objects from Nearby Location slugs in csv)
+
+        // Calculate existing_nearby_locations
+        // Calculate are_nearby_categories_the_same. Add that to $are_category_properties_identical
+
+        // Add nearbyLocations key to the setFieldValues call and insert nearby_locations
+
+//        $existing_locations_nearby = count($existing_location->getFieldValue("nearbyLocations")); // array of categories
+
+
+
+        return \GuzzleHttp\json_encode($result);
     }
 
     /**
-     * Handle a request going to our plugin's actionDoSomething URL,
+     * Handle a request going to our plugin's actionUploadCsv URL,
      * e.g.: actions/csv-to-category-importer/import-csv/upload-csv
+     *
+     *  1) Check if the record in the CSV exists already and has all properties the same as specified
+     *     in the CSV
+     *  2) If the record doesn't exist or has a field that needs updated
+     *      - Update every field to be what is specified in the CSV.
      *
      * @return mixed
      */
     public function actionUploadCsv()
     {
 
-        $file_url = Craft::$app->request->getBodyParams()['url'];
-        $locations = Csvtocategoryimporter::$plugin->importCsv->readLocationsFromCsv($file_url);
+        // Read the CSV file at the specified file_url and convert it into an array called locations.
+
+        $file_url = str_replace(' ', '', Craft::$app->request->getBodyParams()['url']);
+        $import_svc = new ImportSvc();
+        $locations = $import_svc->readLocationsFromCsv($file_url);
 
 
+        // Update or create any locations that need it. If updating, we only update the latitude, longitude & parent in
+        // updateOrCreateLocations.
 
-        $location_category_group_id = Craft::$app->categories->getGroupByHandle('locations')->id;
-
-        $report = [];
-
-        // Loop through each location from the CSV file.
+        $initial_report = $import_svc->updateOrCreateLocations($locations);
 
 
-        foreach ($locations as $key=>$location) {
-
-            $slug = $location['Slug'];
-            $title = $location['Name'];
-            $latitude = $location['Latitude'];
-            $longitude = $location['Longitude'];
-            $parent_slug = $location['Parent Category'];
+        // Now that all the locations are saved and updated in the database, we can update each location's nearbyLocations
+        // field. We couldn't do this on the first pass as there may be locations in the nearbyLocations that had not
+        // yet been saved.
 
 
-            // Determine if category already exists (existing_category).
+        $nearby_location_update = $import_svc->updateNearbyLocations($locations, $initial_report);
+        $report = $nearby_location_update['report'];
+        $failed_nearby_location_uploads = $nearby_location_update['failed_uploads'];
 
-            $does_category_already_exist = false;
-            $are_category_properties_identical = false;
-
-            $existing_category = Category::find()
-                ->groupId($location_category_group_id)
-                ->slug($slug)
-                ->title($title)
-                ->one();
-
-            $new_parent = Category::find()
-                ->slug($parent_slug)
-                ->one();
-
-            $is_a_valid_parent_specified_in_csv = $new_parent && $new_parent->slug === $parent_slug;
-
-
-            // Determine if existing category needs updating.
-
-            if ($existing_category) {
-
-                $does_category_already_exist = true;
-
-                $existing_latitude = number_format((float)$existing_category->getFieldValue('latitude'), 6, '.', '');
-                $existing_longitude = number_format((float)$existing_category->getFieldValue('longitude'), 6, '.', '');
-
-                $existing_category_parent = $existing_category->getParent();
-
-                $is_latitude_the_same = $existing_latitude == $latitude;
-                $is_longitude_the_same = $existing_longitude == $longitude;
-                $is_parent_the_same = $existing_category_parent && $new_parent && $existing_category_parent->slug == $new_parent->slug;
-
-
-                $are_category_properties_identical = $is_latitude_the_same &&
-                                                     $is_longitude_the_same &&
-                                                     $is_parent_the_same;
-            }
-
-
-
-            $this_report = new \stdClass;
-            $this_report->title = $title;
-
-
-
-            // If location category doesn't need to be updated, do nothing.
-            if ($does_category_already_exist && $are_category_properties_identical) {
-                $this_report->status = "Record already existed. No changes were made.";
-            }
-
-
-            // If category needs to be created or updated.
-            else {
-
-                $is_updating_required = $does_category_already_exist && !$are_category_properties_identical;
-                $category = $is_updating_required ? $existing_category : new Category();
-
-                $category->groupId = $location_category_group_id;
-                $category->slug = $slug;
-                $category->title = $title;
-                $category->setFieldValues([
-                    'latitude' => $latitude,
-                    'longitude' => $longitude
-                ]);
-
-                $category->newParentId = $is_a_valid_parent_specified_in_csv ? $new_parent->id  : null;
-
-                Craft::$app->elements->saveElement($category);
-                $this_report->status = $is_updating_required ? "Record already existed & was updated." : "New record created";
-
-            }
-
-            $report[$key] = $this_report;
-
-        }
-
-        return $this->renderTemplate('csv-to-category-importer/report', ['report' => $report]);
+        return $this->renderTemplate('csv-to-category-importer/report',
+            [
+                'report' => $report,
+                'failed_nearby_location_uploads' => $failed_nearby_location_uploads
+            ]
+        );
 
     }
 

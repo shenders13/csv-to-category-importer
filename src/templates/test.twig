@@ -1,0 +1,7 @@
+{% extends "_layouts/cp" %}
+{% set title = "Test" %}
+{% do view.registerAssetBundle("workyard\\csvtocategoryimporter\\assetbundles\\csvtocategoryimporter\\CsvtocategoryimporterAsset") %}
+
+{% set content %}
+    json_encode(existing_locations_nearby)
+{%  endset %}

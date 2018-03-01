@@ -36,7 +36,7 @@
 {# Content that should appear in the page header#}
 {% set extraPageHeaderHtml %}
     <div class="buttons">
-        <a href="{{ pluginCpUrl }}" class="btn submit add icon">{{ "Click Me!"|t('csv-to-category-importer') }}</a>
+        <a href="{{ pluginCpUrl }}" class="btn submit add icon">{{ "Click Me!"|t('csv-to-category') }}</a>
     </div>
 {% endset %}
 
@@ -44,8 +44,10 @@
 {% set content %}
     <p>Here's what you do:</p>
     <ul>
-        <ol>1. Enter the URL of the CSV you want to import</ol>
+        <ol>1. Enter the URL of the CSV you want to import (you may want to put it in an S3 bucket first). The CSV file must be formatted like in the table below.</ol>
         <ol>2. Click "Upload Categories"</ol>
+        <ol>3. Wait</ol>
+        <ol>4. Look at the report to check if anything failed.</ol>
     </ul>
     <br/>
 
@@ -58,30 +60,51 @@
         <input class="btn submit" type="submit" value="{{ 'Upload Categories'|t }}">
     </form>
 
+    <p>The CSV you upload must have the following format:</p>
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Latitude</th>
+            <th>Longitude</th>
+            <th>Slug</th>
+            <th>Parent Category</th>
+            <th>Nearby Locations</th>
+        </tr>
+        <tr>
+            <td>Los Angeles</td>
+            <td>34.0523</td>
+            <td>-118.2446</td>
+            <td>los-angeles</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Manhatten Beach</td>
+            <td>34.0526</td>
+            <td>-118.2464</td>
+            <td>manhatten-beach</td>
+            <td>los-angeles</td>
+            <td>santa-monica,palos-verdes-estate</td>
+        </tr>
+        <tr>
+            <td>Santa Monica</td>
+            <td>34.0595</td>
+            <td>-118.2464</td>
+            <td>santa-monica</td>
+            <td>los-angeles</td>
+            <td>manhatten-beach</td>
+        </tr>
+        <tr>
+            <td>Palos Verdes Estate</td>
+            <td>34.0326</td>
+            <td>-118.2484</td>
+            <td>palos-verdes-estate</td>
+            <td>los-angeles</td>
+            <td>santa-monica</td>
+        </tr>
+    </table>
 
-    {#% set client = {base_uri : 'http://craft.test/', timeout : 10} %#}
 
-    {#{% set request = craft.fetch.request(client, 'GET', 'actions/csv-to-category-importer/import-csv/do-something' ) %}#}
-
-    {#{{ request | json_encode() }}#}
-
-    {#{% set report = request.body %}#}
-
-    {#<table>#}
-        {#<th><b>Title</b></th>#}
-        {#<th><b>Status</b></th>#}
-        {#{%  for location in report %}#}
-            {#<tr>#}
-                {#<td>{{ location.title }}</td>#}
-                {#<td>{{ location.status }}</td>#}
-            {#</tr>#}
-        {#{% endfor %}#}
-
-    {#</table>#}
-
-        {% if report is defined %}
-            <h1>report is set</h1>
-        {% endif %}
 
 
 {% endset %}

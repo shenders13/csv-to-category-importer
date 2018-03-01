@@ -6,6 +6,30 @@
 
     <a href="/admin/categories/locations"><button class="'btn redirect">Go to location categories</button></a>
 
+    {%  if failed_nearby_location_uploads | length %}
+
+        <h1>Warning! The following Nearby Location uploads failed.</h1>
+        <p></p>
+        <p>
+            This is likely due to an attempted "Nearby Location" save before that location actually existed
+            (a location has to exist in the database before you can assign it as a "Nearby Location").
+        </p>
+        <table class="table">
+            <th class="table-header">Location</th>
+            <th class="table-header">Nearby Location Upload That Failed</th>
+            {%  for failure in failed_nearby_location_uploads %}
+                <tr>
+                    <td class="table-cell">{{ failure.location }}</td>
+                    <td class="table-cell">{{ failure.nearby_location_that_failed }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+        <br>
+        <h1>Records you uploaded</h1>
+
+    {% endif %}
+
+
     <table class="table">
         <th class="table-header">Location</th>
         <th class="table-header">What happened</th>
